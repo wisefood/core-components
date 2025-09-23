@@ -1,4 +1,4 @@
-# WiseFood Keycloak Init Utility Image
+# Keycloak Init Utility Image
 
 This utility configures Keycloak, MinIO OIDC, and Kubernetes secrets on startup. It’s designed to run as an **init container** in your cluster so your realm, clients, scopes, and integrations are ready before app pods start.
 
