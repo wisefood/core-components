@@ -22,6 +22,7 @@ KEYCLOAK_REALM = os.getenv("KEYCLOAK_REALM", "master")
 KEYCLOAK_PORT = os.getenv("KEYCLOAK_PORT", "8080")
 KEYCLOAK_PROTO = os.getenv("KEYCLOAK_PROTO", "http")  # prefer https in production
 KEYCLOAK_URL = f"{KEYCLOAK_PROTO}://keycloak:{KEYCLOAK_PORT}"
+KEYCLOAK_DOMAIN = os.getenv("KEYCLOAK_DOMAIN", "https://auth.wisefood.gr")
 
 # -------------------------------------- #
 #              K8s GLOBALS               #
@@ -50,6 +51,7 @@ PRIVATE_ORIGIN = os.getenv("PRIVATE_ORIGIN", "")  # API is non-interactive; keep
 
 # MinIO
 MINIO_API_DOMAIN = os.getenv("MINIO_API_DOMAIN", "https://s3.wisefood.gr")
+MINIO_INTERNAL_DOMAIN = os.getenv("MINIO_INTERNAL_DOMAIN", "http://minio:9000")
 MINIO_ROOT = os.getenv("MINIO_ROOT")
 MINIO_ROOT_PASSWORD = os.getenv("MINIO_ROOT_PASSWORD")
 
@@ -116,7 +118,21 @@ def create_or_update_client(keycloak_admin: KeycloakAdmin, representation: dict)
     if internal_id:
         keycloak_admin.update_client(internal_id, representation)
         return internal_id
-    return keycloak_admin.create_client(representation, skip_exists=True)
+    cli = keycloak_admin.create_client(representation, skip_exists=True)
+
+    # Store the client secret back in Kubernetes secret if applicable
+    if cli and not representation.get("publicClient", False):
+        secret = keycloak_admin.get_client_secrets(cli)
+        secret_value = secret.get("value") if secret else None
+        if secret_value:
+            secret_name = f"kc-{client_id_str}-secret"
+            secret_obj = create_k8s_secret(
+                secret_name=secret_name,
+                namespace=KUBE_NAMESPACE,
+                data_dict={"client_id": client_id_str, "client_secret": secret_value},
+            )
+            apply_secret_to_cluster(secret_obj)
+    return cli
 
 
 def create_realm_role(keycloak_admin: KeycloakAdmin, role_name: str):
@@ -303,9 +319,13 @@ def ensure_wisefood_api_scope(keycloak_admin: KeycloakAdmin, ui_internal_id: str
 
 def run_mc(args: list[str]):
     """
-    Run 'mc' with argument array; do not print secrets.
+    Run 'mc' with argument array and report the command output.
     """
-    subprocess.run(args, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    result = subprocess.run(args, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    print(f"Command: {' '.join(args)}")
+    print(f"Output: {result.stdout}")
+    print(f"Error: {result.stderr}")
+    return result
 
 
 def minio_openid(keycloak_admin: KeycloakAdmin, client_id: str):
@@ -314,12 +334,12 @@ def minio_openid(keycloak_admin: KeycloakAdmin, client_id: str):
     """
     # Base command for setting the alias
     # Using arg arrays to avoid shell quoting/injection
-    run_mc(["mc", "alias", "set", "myminio", MINIO_API_DOMAIN, MINIO_ROOT, MINIO_ROOT_PASSWORD])
+    run_mc(["mc", "alias", "set", "myminio", MINIO_INTERNAL_DOMAIN, MINIO_ROOT, MINIO_ROOT_PASSWORD])
 
     client_secret = keycloak_admin.get_client_secrets(client_id)
     client_secr_value = client_secret.get("value")
 
-    config_url = f"{KEYCLOAK_URL}/realms/{KEYCLOAK_REALM}/.well-known/openid-configuration"
+    config_url = f"{KEYCLOAK_DOMAIN}/realms/{KEYCLOAK_REALM}/.well-known/openid-configuration"
 
     # MinIO usually reads ID Token; we expose 'policy' claim via a user attribute mapper if needed.
     run_mc([
@@ -519,6 +539,9 @@ def main():
                 add_to_id_token="true",       # MinIO reads ID token
                 add_to_access_token="false",
             )
+
+            # Assign the scope to MinIO client
+            kc.add_client_default_client_scope(minio_internal_id, kc.get_client_scopes(clientScopeName="minio_auth_scope")[0]["id"], payload={})
         except Exception as e:
             print(f"MinIO scope creation skipped/failed: {e}")
 
