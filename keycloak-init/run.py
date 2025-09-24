@@ -89,8 +89,22 @@ K_ADMIN = initialize_keycloak_admin_with_retries()
 
 
 def get_client_internal_id(keycloak_admin: KeycloakAdmin, client_id_str: str) -> Optional[str]:
-    clients = keycloak_admin.get_clients(query={"clientId": client_id_str})
-    return clients[0]["id"] if clients else None
+    """
+    Resolve the internal UUID for a clientId in a way that works across python-keycloak versions.
+    """
+    try:
+        uuid = keycloak_admin.get_client_id(client_id_str)  
+        if uuid:
+            return uuid
+    except Exception:
+        pass
+
+    # Fallback for very old versions (no get_client_id or it behaves differently)
+    try:
+        clients = keycloak_admin.get_clients(clientId=client_id_str)
+        return clients[0]["id"] if clients else None
+    except Exception:
+        return None
 
 
 def create_or_update_client(keycloak_admin: KeycloakAdmin, representation: dict) -> str:
@@ -168,7 +182,7 @@ def enable_service_account(keycloak_admin: KeycloakAdmin, client_id: str):
 
 # Function creating a keycloak client scope
 def create_client_scope(
-    keycloak_admin,
+    keycloak_admin: KeycloakAdmin,
     client_id,
     name,
     claim_name,
@@ -212,14 +226,14 @@ def create_client_scope(
         protocol_mapper["config"]["claim.name"] = claim_name
         protocol_mapper["config"]["jsonType.label"] = type
 
-        if mapper_type == "oidc-usermodel-attribute-mapper":
+        if mapper_type == "oidc-usermodel-client-role-mapper":
             protocol_mapper["config"]["user.attribute"] = attribute_name
             protocol_mapper["config"]["userinfo.token.claim"] = "true"
 
     # Create or get scope
     scope = {"name": name, "protocol": "openid-connect"}
     try:
-        client_scope_id = keycloak_admin.create_client_scopes(scope)
+        client_scope_id = keycloak_admin.create_client_scope(scope)
     except KeycloakPostError:
         # If already exists, find it
         existing = next((s for s in keycloak_admin.get_client_scopes() if s["name"] == name), None)
@@ -229,17 +243,20 @@ def create_client_scope(
         raise RuntimeError(f"Unable to ensure client scope '{name}'")
 
     # Idempotently (re)create the mapper
-    existing_mappers = keycloak_admin.get_protocol_mappers(client_scope_id=client_scope_id)
+    existing_mappers = keycloak_admin.get_mappers_from_client(client_id=client_id)
     for m in existing_mappers:
         if m["name"] == mapper_name:
-            keycloak_admin.delete_protocol_mapper(model_id=m["id"], client_scope_id=client_scope_id)
+            keycloak_admin.delete_mapper_from_client_scope(protocol_mapper_id=m["id"], client_scope_id=client_scope_id)
             break
-    keycloak_admin.add_mapper_to_client_scope(client_scope_id, protocol_mapper)
+    # Check if the mapper already exists before adding it
+    existing_mappers = keycloak_admin.get_mappers_from_client_scope(client_scope_id)
+    if not any(m["name"] == protocol_mapper["name"] for m in existing_mappers):
+        keycloak_admin.add_mapper_to_client_scope(client_scope_id, protocol_mapper)
 
     # Attach as DEFAULT scope to the given client (client_id here is internal UUID)
-    default_scopes = keycloak_admin.get_default_client_scopes(client_id)
+    default_scopes = keycloak_admin.get_client_scopes()
     if name not in [s["name"] for s in default_scopes]:
-        keycloak_admin.add_default_client_scope_to_client(client_id, client_scope_id)
+        keycloak_admin.add_client_default_client_scope(client_id=client_id, client_scope_id=client_scope_id, payload={})
 
     return client_scope_id
 
@@ -487,7 +504,7 @@ def main():
         }
         minio_internal_id = create_or_update_client(kc, minio_rep)
 
-        # Optional: expose a user attribute 'policy' as an ID token claim for MinIO
+        # expose a user attribute 'policy' in the ID token claim for MinIO
         try:
             create_client_scope(
                 keycloak_admin=kc,
@@ -495,7 +512,6 @@ def main():
                 name="minio_auth_scope",
                 claim_name="policy",
                 mapper_name="MinIO Policy Attribute",
-                mapper_type="oidc-usermodel-attribute-mapper",
                 attribute_name="policy",  # user attribute 'policy'
                 type="String",
                 multivalued="true",
