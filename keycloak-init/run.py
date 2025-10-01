@@ -325,7 +325,6 @@ def run_mc(args: list[str]):
     result = subprocess.run(args, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     print(f"Command: {' '.join(args)}")
     print(f"Output: {result.stdout}")
-    print(f"Error: {result.stderr}")
     return result
 
 
@@ -543,20 +542,32 @@ def main():
                 add_to_id_token="true",       # MinIO reads ID token
                 add_to_access_token="true",
             )
-
-            # Assign the scope to MinIO client
-            kc.add_client_default_client_scope(minio_internal_id, kc.get_client_scopes(clientScopeName="minio_auth_scope")[0]["id"], payload={})
-            kc.add_client_default_client_scope(api_internal_id, kc.get_client_scopes(clientScopeName="minio_auth_scope")[0]["id"], payload={})
         except Exception as e:
             print(f"MinIO scope creation skipped/failed: {e}")
+
+        try:
+            # Assign the scope to MinIO client
+            kc.add_client_default_client_scope(minio_internal_id, kc.get_client_scope_by_name(client_scope_name="minio_auth_scope")[0]["id"], payload={})
+            kc.add_client_default_client_scope(api_internal_id, kc.get_client_scope_by_name(client_scope_name="minio_auth_scope")[0]["id"], payload={})
+        except Exception as e:
+            print(f"Assigning MinIO scope skipped/failed: {e}")
 
         # Establish MinIO OIDC trust
         try:
             minio_openid(kc, minio_internal_id)
             create_bucket(MINIO_CATALOG_BUCKET)
             ensure_client_roles(kc, MINIO_CLIENT, roles=("readonly", "readwrite", "consoleAdmin"))
+            kc.assign_client_role(
+                kc.get_user_id(KEYCLOAK_ADMIN),
+                get_client_internal_id(kc, MINIO_CLIENT),
+                minio_internal_id,
+                kc.get_client_role(
+                    minio_internal_id,
+                    "consoleAdmin"
+                ),
+            )
         except Exception as e:
-            print(f"MinIO OIDC setup failed: {e}")
+            print(f"Conflict occurred or failed: {e}")
     
     configure_realm_settings(kc)
 
