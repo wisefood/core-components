@@ -54,6 +54,7 @@ MINIO_API_DOMAIN = os.getenv("MINIO_API_DOMAIN", "https://s3.wisefood.gr")
 MINIO_INTERNAL_DOMAIN = os.getenv("MINIO_INTERNAL_DOMAIN", "http://minio:9000")
 MINIO_ROOT = os.getenv("MINIO_ROOT")
 MINIO_ROOT_PASSWORD = os.getenv("MINIO_ROOT_PASSWORD")
+MINIO_CATALOG_BUCKET = os.getenv("MINIO_CATALOG_BUCKET", "catalog")
 
 # Misc
 VERIFY_TLS = KEYCLOAK_PROTO == "https"
@@ -354,7 +355,10 @@ def minio_openid(keycloak_admin: KeycloakAdmin, client_id: str):
     ])
 
     # Restart MinIO service
-    run_mc(["mc", "admin", "service", "restart", "myminio"])
+    restart_command = "mc admin service restart myminio"
+    subprocess.run(
+        f'script -q -c "{restart_command}"', shell=True, check=True
+    )
 
 
 def create_bucket(bucket_name: str):
@@ -549,6 +553,8 @@ def main():
         # Establish MinIO OIDC trust
         try:
             minio_openid(kc, minio_internal_id)
+            create_bucket(MINIO_CATALOG_BUCKET)
+            ensure_client_roles(kc, MINIO_CLIENT, roles=("readonly", "readwrite", "consoleAdmin"))
         except Exception as e:
             print(f"MinIO OIDC setup failed: {e}")
     
