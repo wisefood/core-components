@@ -58,33 +58,27 @@ MINIO_ROOT_PASSWORD = os.getenv("MINIO_ROOT_PASSWORD")
 # Misc
 VERIFY_TLS = KEYCLOAK_PROTO == "https"
 
-
-def initialize_keycloak_admin_with_retries(max_wait: int = 120, step: int = 5) -> KeycloakAdmin:
+def initialize_keycloak_admin() -> KeycloakAdmin:
     """
-    Initialize the Keycloak Admin client with readiness retries.
+    Initialize the Keycloak Admin client.
     """
-    start = time.time()
-    last_err: Optional[Exception] = None
-    while time.time() - start < max_wait:
-        try:
-            kc = KeycloakAdmin(
-                server_url=KEYCLOAK_URL,
-                username=KEYCLOAK_ADMIN,
-                password=KEYCLOAK_ADMIN_PASSWORD,
-                realm_name=KEYCLOAK_REALM,
-                verify=VERIFY_TLS,
-            )
-            # quick sanity call
-            kc.get_realm(KEYCLOAK_REALM)
-            return kc
-        except Exception as e:
-            last_err = e
-            time.sleep(step)
-    raise RuntimeError(f"Keycloak not ready: {last_err}")
+    try:
+        kc = KeycloakAdmin(
+            server_url=KEYCLOAK_URL,
+            username=KEYCLOAK_ADMIN,
+            password=KEYCLOAK_ADMIN_PASSWORD,
+            realm_name=KEYCLOAK_REALM,
+            verify=VERIFY_TLS,
+        )
+        # Verify connection by fetching the realm
+        kc.get_realm(KEYCLOAK_REALM)
+        return kc
+    except Exception as e:
+        raise RuntimeError(f"Failed to initialize Keycloak Admin: {e}")
 
 
-# Instantiate a single Keycloak Admin to avoid bottlenecks
-K_ADMIN = initialize_keycloak_admin_with_retries()
+# Instantiate a single Keycloak Admin
+K_ADMIN = initialize_keycloak_admin()
 
 
 # ---- Keycloak Helpers ------------------------------------------------
@@ -117,22 +111,28 @@ def create_or_update_client(keycloak_admin: KeycloakAdmin, representation: dict)
     internal_id = get_client_internal_id(keycloak_admin, client_id_str)
     if internal_id:
         keycloak_admin.update_client(internal_id, representation)
-        return internal_id
-    cli = keycloak_admin.create_client(representation, skip_exists=True)
+    else:
+        internal_id = keycloak_admin.create_client(representation, skip_exists=True)
 
     # Store the client secret back in Kubernetes secret if applicable
-    if cli and not representation.get("publicClient", False):
-        secret = keycloak_admin.get_client_secrets(cli)
+    if internal_id and not representation.get("publicClient", False):
+        secret = keycloak_admin.get_client_secrets(internal_id)
         secret_value = secret.get("value") if secret else None
         if secret_value:
             secret_name = f"kc-{client_id_str}-secret"
             secret_obj = create_k8s_secret(
                 secret_name=secret_name,
                 namespace=KUBE_NAMESPACE,
-                data_dict={"client_id": client_id_str, "client_secret": secret_value},
+                data_dict={"secret": secret_value},
             )
-            apply_secret_to_cluster(secret_obj)
-    return cli
+            try:
+                apply_secret_to_cluster(secret_obj)
+            except k8s.exceptions.ApiException as e:
+                if e.status == 409:
+                    print(f"Secret '{secret_name}' already exists. Skipping creation.")
+                else:
+                    print(f"Failed to apply secret '{secret_name}': {e}")
+    return internal_id
 
 
 def create_realm_role(keycloak_admin: KeycloakAdmin, role_name: str):
