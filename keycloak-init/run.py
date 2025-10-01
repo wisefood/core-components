@@ -529,7 +529,7 @@ def main():
 
         # expose a user attribute 'policy' in the ID token claim for MinIO
         try:
-            create_client_scope(
+            scope_id = create_client_scope(
                 keycloak_admin=kc,
                 client_id=minio_internal_id,
                 name="minio_auth_scope",
@@ -543,12 +543,14 @@ def main():
                 add_to_access_token="true",
             )
         except Exception as e:
+            scope_id = kc.get_client_scope_by_name(client_scope_name="minio_auth_scope")["id"]
             print(f"MinIO scope creation skipped/failed: {e}")
 
         try:
             # Assign the scope to MinIO client
-            kc.add_client_default_client_scope(minio_internal_id, kc.get_client_scope_by_name(client_scope_name="minio_auth_scope")[0]["id"], payload={})
-            kc.add_client_default_client_scope(api_internal_id, kc.get_client_scope_by_name(client_scope_name="minio_auth_scope")[0]["id"], payload={})
+            kc.add_client_default_client_scope(minio_internal_id, scope_id, payload={"realm": KEYCLOAK_REALM, "client": MINIO_CLIENT, "clientScopeId": "minio_auth_scope"})
+            kc.add_client_default_client_scope(api_internal_id, scope_id, payload={"realm": KEYCLOAK_REALM, "client": PRIVATE_CLIENT, "clientScopeId": "minio_auth_scope"})
+            kc.add_client_default_client_scope(ui_internal_id, scope_id, payload={"realm": KEYCLOAK_REALM, "client": PUBLIC_CLIENT, "clientScopeId": "minio_auth_scope"})
         except Exception as e:
             print(f"Assigning MinIO scope skipped/failed: {e}")
 
@@ -559,7 +561,6 @@ def main():
             ensure_client_roles(kc, MINIO_CLIENT, roles=("readonly", "readwrite", "consoleAdmin"))
             kc.assign_client_role(
                 kc.get_user_id(KEYCLOAK_ADMIN),
-                get_client_internal_id(kc, MINIO_CLIENT),
                 minio_internal_id,
                 kc.get_client_role(
                     minio_internal_id,
