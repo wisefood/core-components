@@ -537,11 +537,12 @@ def main():
                 multivalued="true",
                 audience_client_id=None,
                 add_to_id_token="true",       # MinIO reads ID token
-                add_to_access_token="false",
+                add_to_access_token="true",
             )
 
             # Assign the scope to MinIO client
             kc.add_client_default_client_scope(minio_internal_id, kc.get_client_scopes(clientScopeName="minio_auth_scope")[0]["id"], payload={})
+            kc.add_client_default_client_scope(api_internal_id, kc.get_client_scopes(clientScopeName="minio_auth_scope")[0]["id"], payload={})
         except Exception as e:
             print(f"MinIO scope creation skipped/failed: {e}")
 
