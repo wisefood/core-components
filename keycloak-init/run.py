@@ -41,13 +41,15 @@ PRIVATE_CLIENT = os.getenv("KC_PRIVATE_CLIENT_ID", "wisefood-api")
 
 # Client Redirects
 MINIO_REDIRECT = os.getenv("MINIO_REDIRECT", "https://s3.wisefood.gr/oauth_callback")
-PUBLIC_REDIRECT = os.getenv("PUBLIC_REDIRECT", "https://wisefood.gr:3000/*")
-PRIVATE_REDIRECT = os.getenv("PRIVATE_REDIRECT", "")  # API is non-interactive; keep empty
+PUBLIC_REDIRECT = os.getenv("PUBLIC_REDIRECT", "https://wisefood.gr/*")
+PRIVATE_REDIRECT = os.getenv(
+    "PRIVATE_REDIRECT", ""
+)
 
 # Client Valid Origins
 MINIO_ORIGIN = os.getenv("MINIO_ORIGIN", "https://s3.wisefood.gr")
-PUBLIC_ORIGIN = os.getenv("PUBLIC_ORIGIN", "https://wisefood.gr:3000")
-PRIVATE_ORIGIN = os.getenv("PRIVATE_ORIGIN", "")  # API is non-interactive; keep empty
+PUBLIC_ORIGIN = os.getenv("PUBLIC_ORIGIN", "https://wisefood.gr")
+PRIVATE_ORIGIN = os.getenv("PRIVATE_ORIGIN", "https://wisefood.gr") 
 
 # MinIO
 MINIO_API_DOMAIN = os.getenv("MINIO_API_DOMAIN", "https://s3.wisefood.gr")
@@ -56,8 +58,19 @@ MINIO_ROOT = os.getenv("MINIO_ROOT")
 MINIO_ROOT_PASSWORD = os.getenv("MINIO_ROOT_PASSWORD")
 MINIO_CATALOG_BUCKET = os.getenv("MINIO_CATALOG_BUCKET", "catalog")
 
+# SMTP
+SMTP_HOST = os.getenv("SMTP_HOST", "wisefood.gr")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "465"))
+SMTP_USER = os.getenv("SMTP_USER", None)
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", None)
+
+# Google OAuth (if used)
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", None)
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", None)
+
 # Misc
 VERIFY_TLS = KEYCLOAK_PROTO == "https"
+
 
 def initialize_keycloak_admin() -> KeycloakAdmin:
     """
@@ -85,12 +98,14 @@ K_ADMIN = initialize_keycloak_admin()
 # ---- Keycloak Helpers ------------------------------------------------
 
 
-def get_client_internal_id(keycloak_admin: KeycloakAdmin, client_id_str: str) -> Optional[str]:
+def get_client_internal_id(
+    keycloak_admin: KeycloakAdmin, client_id_str: str
+) -> Optional[str]:
     """
     Resolve the internal UUID for a clientId in a way that works across python-keycloak versions.
     """
     try:
-        uuid = keycloak_admin.get_client_id(client_id_str)  
+        uuid = keycloak_admin.get_client_id(client_id_str)
         if uuid:
             return uuid
     except Exception:
@@ -153,7 +168,9 @@ def create_realm_role(keycloak_admin: KeycloakAdmin, role_name: str):
     return role_name
 
 
-def ensure_client_roles(keycloak_admin: KeycloakAdmin, client_id_str: str, roles=("read", "write")):
+def ensure_client_roles(
+    keycloak_admin: KeycloakAdmin, client_id_str: str, roles=("read", "write")
+):
     """
     Ensure that the specified client roles exist for a given client.
     """
@@ -168,7 +185,7 @@ def ensure_client_roles(keycloak_admin: KeycloakAdmin, client_id_str: str, roles
 def enable_service_account(keycloak_admin: KeycloakAdmin, client_id: str):
     """
     Enable service account for a given client and assign the admin role.
-    This only applies to private clients, such that they are able to 
+    This only applies to private clients, such that they are able to
     perform admin tasks programmatically. (e.g. MinIO, WiseFood-API etc.)
     """
     try:
@@ -196,6 +213,7 @@ def enable_service_account(keycloak_admin: KeycloakAdmin, client_id: str):
     except KeycloakPostError as e:
         print(f"Failed to enable service account: {e}")
         raise
+
 
 # Function creating a keycloak client scope
 def create_client_scope(
@@ -253,7 +271,9 @@ def create_client_scope(
         client_scope_id = keycloak_admin.create_client_scope(scope)
     except KeycloakPostError:
         # If already exists, find it
-        existing = next((s for s in keycloak_admin.get_client_scopes() if s["name"] == name), None)
+        existing = next(
+            (s for s in keycloak_admin.get_client_scopes() if s["name"] == name), None
+        )
         client_scope_id = existing["id"] if existing else None
 
     if not client_scope_id:
@@ -263,7 +283,9 @@ def create_client_scope(
     existing_mappers = keycloak_admin.get_mappers_from_client(client_id=client_id)
     for m in existing_mappers:
         if m["name"] == mapper_name:
-            keycloak_admin.delete_mapper_from_client_scope(protocol_mapper_id=m["id"], client_scope_id=client_scope_id)
+            keycloak_admin.delete_mapper_from_client_scope(
+                protocol_mapper_id=m["id"], client_scope_id=client_scope_id
+            )
             break
     # Check if the mapper already exists before adding it
     existing_mappers = keycloak_admin.get_mappers_from_client_scope(client_scope_id)
@@ -273,12 +295,16 @@ def create_client_scope(
     # Attach as DEFAULT scope to the given client (client_id here is internal UUID)
     default_scopes = keycloak_admin.get_client_scopes()
     if name not in [s["name"] for s in default_scopes]:
-        keycloak_admin.add_client_default_client_scope(client_id=client_id, client_scope_id=client_scope_id, payload={})
+        keycloak_admin.add_client_default_client_scope(
+            client_id=client_id, client_scope_id=client_scope_id, payload={}
+        )
 
     return client_scope_id
 
 
-def ensure_wisefood_api_scope(keycloak_admin: KeycloakAdmin, ui_internal_id: str, api_client_id_str: str):
+def ensure_wisefood_api_scope(
+    keycloak_admin: KeycloakAdmin, ui_internal_id: str, api_client_id_str: str
+):
     """
     Ensures the combined client scope 'wisefood-api-scope' is present with:
       - Audience mapper --> adds wisefood-api into 'aud' of access token
@@ -322,7 +348,9 @@ def run_mc(args: list[str]):
     """
     Run 'mc' with argument array and report the command output.
     """
-    result = subprocess.run(args, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    result = subprocess.run(
+        args, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+    )
     print(f"Command: {' '.join(args)}")
     print(f"Output: {result.stdout}")
     return result
@@ -334,30 +362,47 @@ def minio_openid(keycloak_admin: KeycloakAdmin, client_id: str):
     """
     # Base command for setting the alias
     # Using arg arrays to avoid shell quoting/injection
-    run_mc(["mc", "alias", "set", "myminio", MINIO_INTERNAL_DOMAIN, MINIO_ROOT, MINIO_ROOT_PASSWORD])
+    run_mc(
+        [
+            "mc",
+            "alias",
+            "set",
+            "myminio",
+            MINIO_INTERNAL_DOMAIN,
+            MINIO_ROOT,
+            MINIO_ROOT_PASSWORD,
+        ]
+    )
 
     client_secret = keycloak_admin.get_client_secrets(client_id)
     client_secr_value = client_secret.get("value")
 
-    config_url = f"{KEYCLOAK_DOMAIN}/realms/{KEYCLOAK_REALM}/.well-known/openid-configuration"
+    config_url = (
+        f"{KEYCLOAK_DOMAIN}/realms/{KEYCLOAK_REALM}/.well-known/openid-configuration"
+    )
 
     # MinIO usually reads ID Token; we expose 'policy' claim via a user attribute mapper if needed.
-    run_mc([
-        "mc", "idp", "openid", "add", "myminio", "wisefood-sso",
-        f"client_id={MINIO_CLIENT}",
-        f"client_secret={client_secr_value}",
-        f"config_url={config_url}",
-        "claim_name=policy",
-        'display_name=WiseFood SSO',
-        "scopes=openid",
-        f"redirect_uri={MINIO_REDIRECT}"
-    ])
+    run_mc(
+        [
+            "mc",
+            "idp",
+            "openid",
+            "add",
+            "myminio",
+            "wisefood-sso",
+            f"client_id={MINIO_CLIENT}",
+            f"client_secret={client_secr_value}",
+            f"config_url={config_url}",
+            "claim_name=policy",
+            "display_name=WiseFood SSO",
+            "scopes=openid",
+            f"redirect_uri={MINIO_REDIRECT}",
+        ]
+    )
 
     # Restart MinIO service
     restart_command = "mc admin service restart myminio"
-    subprocess.run(
-        f'script -q -c "{restart_command}"', shell=True, check=True
-    )
+    subprocess.run(f'script -q -c "{restart_command}"', shell=True, check=True)
 
 
 def create_bucket(bucket_name: str):
@@ -413,28 +458,132 @@ def apply_secret_to_cluster(secret):
         )
     except k8s.exceptions.ApiException as e:
         if e.status == 409:
-            v1.replace_namespaced_secret(secret["metadata"]["name"], secret["metadata"]["namespace"], secret)
-            print(f"Secret '{secret['metadata']['name']}' replaced in namespace '{secret['metadata']['namespace']}'.")
+            v1.replace_namespaced_secret(
+                secret["metadata"]["name"], secret["metadata"]["namespace"], secret
+            )
+            print(
+                f"Secret '{secret['metadata']['name']}' replaced in namespace '{secret['metadata']['namespace']}'."
+            )
         else:
             print(f"Failed to create secret: {e}")
-
 
 
 def configure_realm_settings(keycloak_admin: KeycloakAdmin):
     admin_id = keycloak_admin.get_user_id("admin")
     admin_rep = keycloak_admin.get_user(admin_id)
-    admin_rep['firstName'] = 'WiseFood'
-    admin_rep['lastName'] = 'Administrator'
-    admin_rep['email'] = KEYCLOAK_ADMIN_EMAIL
-    admin_rep['emailVerified'] = True
+    admin_rep["firstName"] = "WiseFood"
+    admin_rep["lastName"] = "Administrator"
+    admin_rep["email"] = KEYCLOAK_ADMIN_EMAIL
+    admin_rep["emailVerified"] = True
     keycloak_admin.update_user(admin_id, admin_rep)
 
     realm_rep = keycloak_admin.get_realm(KEYCLOAK_REALM)
+
+    # Set SMTP settings if provided
+    if SMTP_USER and SMTP_PASSWORD:
+        realm_rep["smtpServer"] = {
+            "host": SMTP_HOST,
+            "port": SMTP_PORT,
+            "auth": True,
+            "user": SMTP_USER,
+            "password": SMTP_PASSWORD,
+            "ssl": True if SMTP_PORT == 465 else False,
+            "starttls": True if SMTP_PORT == 465 else False,
+            "from": SMTP_USER,
+            "fromDisplayName": "WiseFood SSO",
+        }
+
+    # Set branding and token lifespan
     realm_rep["displayName"] = "WiseFood SSO"
+    realm_rep["displayNameHtml"] = (
+        '<div class="kc-logo-text"><span>Keycloak</span></div>'
+    )
     realm_rep["accessTokenLifespan"] = 10800
+    realm_rep["ssoSessionIdleTimeout"] = 18000
+    realm_rep["ssoSessionMaxLifespan"] = 36000
+    realm_rep["rememberMe"] = True
+    realm_rep["verifyEmail"] = True
+    realm_rep["resetPasswordAllowed"] = True
+
     realm_rep["loginTheme"] = "keycloakify-starter"
+    realm_rep["accountTheme"] = "keycloakify-starter"
+
+    # Set internationalization settings
+    realm_rep["internationalizationEnabled"] = True
+    realm_rep["supportedLocales"] = [
+        "de",
+        "nl",
+        "no",
+        "fi",
+        "pt",
+        "el",
+        "lt",
+        "en",
+        "lv",
+        "it",
+        "fr",
+        "hu",
+        "es",
+        "cs",
+        "uk",
+        "sk",
+        "pl",
+        "da",
+    ]
+
+    # Set user registration settings
+    realm_rep["registrationAllowed"] = True
+    realm_rep["verifyEmail"] = True
+    realm_rep["resetPasswordAllowed"] = True
+    realm_rep["editUsernameAllowed"] = False
+    realm_rep["registrationEmailAsUsername"] = True
+    realm_rep["bruteForceProtected"] = True
+
+    # Configure Identity Providers if Google OAuth is set
+    if GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET:
+        idp_alias = "google"
+        # Build identity provider representation (no system-generated fields)
+        google_idp = {
+            "alias": idp_alias,
+            "providerId": "google",
+            "enabled": True,
+            "updateProfileFirstLoginMode": "on",
+            "trustEmail": True,
+            "storeToken": True,
+            "addReadTokenRoleOnCreate": False,
+            "authenticateByDefault": False,
+            "linkOnly": False,
+            "config": {
+                "hideOnLoginPage": "false",
+                "acceptsPromptNoneForwardFromClient": "false",
+                "clientId": GOOGLE_CLIENT_ID,
+                "disableUserInfo": "false",
+                "filteredByClaim": "false",
+                "syncMode": "LEGACY",
+                "userIp": "false",
+                "clientSecret": GOOGLE_CLIENT_SECRET,
+                "caseSensitiveOriginalUsername": "false",
+                "guiOrder": "1",
+            },
+        }
+
+        idps = realm_rep.get("identityProviders", [])
+        # Replace existing provider with same alias or append
+        replaced = False
+        for idx, ip in enumerate(idps):
+            if ip.get("alias") == idp_alias:
+                idps[idx] = google_idp
+                replaced = True
+                break
+        if not replaced:
+            idps.append(google_idp)
+        realm_rep["identityProviders"] = idps
+
+    # Last apply the password policy
+    realm_rep["passwordPolicy"] = "length(8) and specialChars(1) and upperCase(1) and digits(1) and forceExpiredPasswordChange(365)"
+
     keycloak_admin.update_realm(KEYCLOAK_REALM, realm_rep)
-    
+
 
 # ---- App wiring ------------------------------------------------------
 
@@ -448,24 +597,21 @@ def main():
         "protocol": "openid-connect",
         "publicClient": False,
         "enabled": True,
-
-        # Enable password grant 
+        # Enable password grant
         "standardFlowEnabled": False,
         "implicitFlowEnabled": False,
         "directAccessGrantsEnabled": True,
         "serviceAccountsEnabled": True,
-
         "redirectUris": [],
         "webOrigins": [],
-
         "clientAuthenticatorType": "client-secret",
         "attributes": {
             "client_credentials.use_refresh_token": "false",
             "backchannel.logout.session.required": "true",
             "backchannel.logout.revoke.offline.tokens": "false",
             "oidc.ciba.grant.enabled": "false",
-            "oauth2.device.authorization.grant.enabled": "false"
-        }
+            "oauth2.device.authorization.grant.enabled": "false",
+        },
     }
     api_internal_id = create_or_update_client(kc, api_rep)
 
@@ -474,7 +620,9 @@ def main():
 
     # Give wisefood-api **admin** by assigning the realm 'admin' role to its service account
     try:
-        enable_service_account(kc, api_internal_id)  # uses your original function & comments
+        enable_service_account(
+            kc, api_internal_id
+        )  # uses your original function & comments
     except Exception as e:
         print(f"Assigning admin role to wisefood-api failed: {e}")
 
@@ -484,23 +632,20 @@ def main():
         "protocol": "openid-connect",
         "publicClient": True,
         "enabled": True,
-
         "standardFlowEnabled": True,
         "implicitFlowEnabled": False,
         "directAccessGrantsEnabled": False,
         "serviceAccountsEnabled": False,
-
         "redirectUris": [PUBLIC_REDIRECT],
         "webOrigins": [PUBLIC_ORIGIN],
-
         "attributes": {
             "oauth.pkce.enforced": "true",
             "pkce.code.challenge.method": "S256",
             "use.refresh.tokens": "true",
             "client_credentials.use_refresh_token": "false",
             "backchannel.logout.session.required": "true",
-            "backchannel.logout.revoke.offline.tokens": "false"
-        }
+            "backchannel.logout.revoke.offline.tokens": "false",
+        },
     }
     ui_internal_id = create_or_update_client(kc, ui_rep)
 
@@ -514,15 +659,12 @@ def main():
             "protocol": "openid-connect",
             "publicClient": False,
             "enabled": True,
-
-            "standardFlowEnabled": True,   # MinIO uses auth code flow
+            "standardFlowEnabled": True,  # MinIO uses auth code flow
             "implicitFlowEnabled": False,
             "directAccessGrantsEnabled": False,
             "serviceAccountsEnabled": True,
-
             "redirectUris": [MINIO_REDIRECT],
             "webOrigins": [MINIO_ORIGIN],
-
             "clientAuthenticatorType": "client-secret",
         }
         minio_internal_id = create_or_update_client(kc, minio_rep)
@@ -539,18 +681,44 @@ def main():
                 type="String",
                 multivalued="true",
                 audience_client_id=None,
-                add_to_id_token="true",       # MinIO reads ID token
+                add_to_id_token="true",  # MinIO reads ID token
                 add_to_access_token="true",
             )
         except Exception as e:
-            scope_id = kc.get_client_scope_by_name(client_scope_name="minio_auth_scope")["id"]
+            scope_id = kc.get_client_scope_by_name(
+                client_scope_name="minio_auth_scope"
+            )["id"]
             print(f"MinIO scope creation skipped/failed: {e}")
 
         try:
             # Assign the scope to MinIO client
-            kc.add_client_default_client_scope(minio_internal_id, scope_id, payload={"realm": KEYCLOAK_REALM, "client": MINIO_CLIENT, "clientScopeId": "minio_auth_scope"})
-            kc.add_client_default_client_scope(api_internal_id, scope_id, payload={"realm": KEYCLOAK_REALM, "client": PRIVATE_CLIENT, "clientScopeId": "minio_auth_scope"})
-            kc.add_client_default_client_scope(ui_internal_id, scope_id, payload={"realm": KEYCLOAK_REALM, "client": PUBLIC_CLIENT, "clientScopeId": "minio_auth_scope"})
+            kc.add_client_default_client_scope(
+                minio_internal_id,
+                scope_id,
+                payload={
+                    "realm": KEYCLOAK_REALM,
+                    "client": MINIO_CLIENT,
+                    "clientScopeId": "minio_auth_scope",
+                },
+            )
+            kc.add_client_default_client_scope(
+                api_internal_id,
+                scope_id,
+                payload={
+                    "realm": KEYCLOAK_REALM,
+                    "client": PRIVATE_CLIENT,
+                    "clientScopeId": "minio_auth_scope",
+                },
+            )
+            kc.add_client_default_client_scope(
+                ui_internal_id,
+                scope_id,
+                payload={
+                    "realm": KEYCLOAK_REALM,
+                    "client": PUBLIC_CLIENT,
+                    "clientScopeId": "minio_auth_scope",
+                },
+            )
         except Exception as e:
             print(f"Assigning MinIO scope skipped/failed: {e}")
 
@@ -558,19 +726,19 @@ def main():
         try:
             minio_openid(kc, minio_internal_id)
             create_bucket(MINIO_CATALOG_BUCKET)
-            ensure_client_roles(kc, MINIO_CLIENT, roles=("readonly", "readwrite", "consoleAdmin"))
+            ensure_client_roles(
+                kc, MINIO_CLIENT, roles=("readonly", "readwrite", "consoleAdmin")
+            )
             kc.assign_client_role(
                 kc.get_user_id(KEYCLOAK_ADMIN),
                 minio_internal_id,
-                kc.get_client_role(
-                    minio_internal_id,
-                    "consoleAdmin"
-                ),
+                kc.get_client_role(minio_internal_id, "consoleAdmin"),
             )
         except Exception as e:
             print(f"Conflict occurred or failed: {e}")
-    
+
     configure_realm_settings(kc)
+
 
 if __name__ == "__main__":
     main()
