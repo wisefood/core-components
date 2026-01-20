@@ -58,6 +58,11 @@ MINIO_ROOT = os.getenv("MINIO_ROOT")
 MINIO_ROOT_PASSWORD = os.getenv("MINIO_ROOT_PASSWORD")
 MINIO_CATALOG_BUCKET = os.getenv("MINIO_CATALOG_BUCKET", "catalog")
 
+# Application Accounts 
+FOODSCHOLAR_CLIENT = os.getenv("KC_FOODSCHOLAR_CLIENT_ID", "foodscholar")
+RECIPEWRANGLER_CLIENT = os.getenv("KC_RECIPEWRANGLER_CLIENT_ID", "recipewrangler")
+FOODCHAT_CLIENT = os.getenv("KC_FOODCHAT_CLIENT_ID", "foodchat")
+
 # SMTP
 SMTP_HOST = os.getenv("SMTP_HOST", "wisefood.gr")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "465"))
@@ -182,9 +187,9 @@ def ensure_client_roles(
             pass
 
 
-def enable_service_account(keycloak_admin: KeycloakAdmin, client_id: str):
+def enable_service_account(keycloak_admin: KeycloakAdmin, client_id: str, target_role = "admin"):
     """
-    Enable service account for a given client and assign the admin role.
+    Enable service account for a given client and assign the target role.
     This only applies to private clients, such that they are able to
     perform admin tasks programmatically. (e.g. MinIO, WiseFood-API etc.)
     """
@@ -200,7 +205,7 @@ def enable_service_account(keycloak_admin: KeycloakAdmin, client_id: str):
         keycloak_admin.update_client(client_id, client_representation)
         print(f"Service account enabled for client with ID: {client_id}")
 
-        role = keycloak_admin.get_realm_role("admin")
+        role = keycloak_admin.get_realm_role(target_role)
         print(f"Retrieved existing role: {role}")
 
         service_account_user = keycloak_admin.get_client_service_account_user(client_id)
@@ -651,6 +656,39 @@ def main():
 
     # --- client scope: wisefood-api-scope (aud + roles) ---
     ensure_wisefood_api_scope(kc, ui_internal_id, PRIVATE_CLIENT)
+
+    # Create realm role 'agent' for application accounts
+    create_realm_role(kc, "agent")
+    
+    # Create clients used as MTM application accounts
+    app_clients = [FOODSCHOLAR_CLIENT, RECIPEWRANGLER_CLIENT, FOODCHAT_CLIENT]
+    for app_client in app_clients:
+        app_rep = {
+            "clientId": app_client,
+            "protocol": "openid-connect",
+            "publicClient": False,
+            "enabled": True,
+            "standardFlowEnabled": False,
+            "implicitFlowEnabled": False,
+            "directAccessGrantsEnabled": True,
+            "serviceAccountsEnabled": True,
+            "redirectUris": [],
+            "webOrigins": [],
+            "clientAuthenticatorType": "client-secret",
+        }
+        app_internal_id = create_or_update_client(kc, app_rep)
+
+        # Ensure some API-scoped client roles exist
+        ensure_client_roles(kc, app_client, roles=("read", "write"))
+
+        # Give the application account **admin** by assigning the realm 'admin' role to its service account
+        try:
+            enable_service_account(
+                kc, app_internal_id, "agent"
+            )  
+        except Exception as e:
+            print(f"Assigning admin role to {app_client} failed: {e}")
+
 
     # --- MinIO OIDC (if configured) ---
     if MINIO_ROOT and MINIO_ROOT_PASSWORD:
