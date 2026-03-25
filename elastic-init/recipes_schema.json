@@ -1,0 +1,10 @@
+{
+  "mappings": {
+    "properties": {
+      "id": { "type": "keyword" },
+      "title": { "type": "search_as_you_type" },
+      "ingredients": { "type": "text" },
+      "tags": { "type": "keyword" }
+    }
+  }
+}
