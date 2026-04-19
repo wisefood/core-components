@@ -1,4 +1,2 @@
-FROM wisefood/chromadb:latest
-
-RUN cp -a /chroma /chroma-init
-
+FROM chromadb/chroma:latest
+ADD chroma.tar.gz /chroma-init/

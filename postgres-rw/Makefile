@@ -1,5 +1,5 @@
 IMAGE_NAME = wisefood/postgres-rw
-IMAGE_TAG = latest
+IMAGE_TAG = patch
 
 .PHONY: build
 build:
