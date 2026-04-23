@@ -169,6 +169,25 @@ def build_url(es_url: str, path: str = "") -> str:
     return urllib.parse.urljoin(es_url.rstrip("/") + "/", path.lstrip("/"))
 
 
+def sniff_input_format(path: Path, chunk_size: int = 4096) -> str:
+    with path.open("r", encoding="utf-8") as handle:
+        while True:
+            chunk = handle.read(chunk_size)
+            if chunk == "":
+                raise ValueError(f"{path} is empty.")
+
+            for character in chunk:
+                if character.isspace():
+                    continue
+                if character == "[":
+                    return "json_array"
+                if character == "{":
+                    return "ndjson"
+                raise ValueError(
+                    f"{path} must start with '[' for a JSON array or '{{' for NDJSON objects."
+                )
+
+
 def iter_json_array(path: Path, chunk_size: int = 1024 * 1024) -> Iterator[Any]:
     decoder = json.JSONDecoder()
 
@@ -250,14 +269,54 @@ def iter_json_array(path: Path, chunk_size: int = 1024 * 1024) -> Iterator[Any]:
                 raise ValueError("JSON array ended before closing ']'.")
 
 
+def iter_ndjson(path: Path) -> Iterator[Any]:
+    with path.open("r", encoding="utf-8") as handle:
+        for line_number, raw_line in enumerate(handle, start=1):
+            line = raw_line.strip()
+            if not line:
+                continue
+
+            try:
+                yield json.loads(line)
+            except json.JSONDecodeError as exc:
+                snippet = line[:120]
+                raise ValueError(
+                    f"Could not decode NDJSON on line {line_number}: {snippet!r}"
+                ) from exc
+
+
+def iter_input_documents(path: Path) -> Iterator[Any]:
+    input_format = sniff_input_format(path)
+    LOGGER.info("Detected input format for %s: %s", path, input_format)
+
+    if input_format == "json_array":
+        yield from iter_json_array(path)
+        return
+
+    if input_format == "ndjson":
+        yield from iter_ndjson(path)
+        return
+
+    raise ValueError(f"Unsupported input format for {path}: {input_format}")
+
+
 def normalize_doc(raw_doc: Any) -> Dict[str, Any]:
     if not isinstance(raw_doc, dict):
         raise ValueError(f"Each document must be an object, got {type(raw_doc).__name__}.")
 
-    if "id" not in raw_doc:
+    if "_source" in raw_doc:
+        source = raw_doc["_source"]
+        if not isinstance(source, dict):
+            raise ValueError("Document '_source' must be an object.")
+        document = dict(source)
+        if "id" not in document and raw_doc.get("_id") is not None:
+            document["id"] = raw_doc["_id"]
+    else:
+        document = dict(raw_doc)
+
+    if "id" not in document:
         raise ValueError("Document is missing required field 'id'.")
 
-    document = dict(raw_doc)
     document["id"] = str(document["id"])
 
     if "title" in document and document["title"] is not None:
@@ -397,7 +456,7 @@ def import_documents(args: argparse.Namespace, input_path: Path) -> int:
 
     def documents() -> Iterator[Dict[str, Any]]:
         count = 0
-        for raw_document in iter_json_array(input_path):
+        for raw_document in iter_input_documents(input_path):
             yield normalize_doc(raw_document)
             count += 1
             if args.max_docs is not None and count >= args.max_docs:
