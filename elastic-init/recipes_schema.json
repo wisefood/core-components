@@ -1,10 +1,29 @@
 {
-  "mappings": {
-    "properties": {
-      "id": { "type": "keyword" },
-      "title": { "type": "search_as_you_type" },
-      "ingredients": { "type": "text" },
-      "tags": { "type": "keyword" }
+    "mappings": {
+        "properties": {
+            "dish_type": {
+                "type": "keyword"
+            },
+            "id": {
+                "type": "keyword"
+            },
+            "image_url": {
+                "type": "keyword"
+            },
+            "ingredients": {
+                "type": "text"
+            },
+            "source": {
+                "type": "keyword"
+            },
+            "tags": {
+                "type": "keyword"
+            },
+            "title": {
+                "type": "search_as_you_type",
+                "doc_values": false,
+                "max_shingle_size": 3
+            }
+        }
     }
-  }
 }
