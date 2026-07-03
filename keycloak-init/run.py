@@ -659,6 +659,12 @@ def main():
 
     # Create realm role 'agent' for application accounts
     create_realm_role(kc, "agent")
+
+    # Create realm role 'guest' for ephemeral demo users. Guest accounts are
+    # created/deleted at runtime by wisefood-api's service account (which has
+    # the realm 'admin' role); this role marks them so services can restrict
+    # what guests may do and the reaper can identify them.
+    create_realm_role(kc, "guest")
     
     # Create clients used as MTM application accounts
     app_clients = [FOODSCHOLAR_CLIENT, RECIPEWRANGLER_CLIENT, FOODCHAT_CLIENT]
