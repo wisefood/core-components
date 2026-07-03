@@ -77,27 +77,39 @@ GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", None)
 VERIFY_TLS = KEYCLOAK_PROTO == "https"
 
 
-def initialize_keycloak_admin() -> KeycloakAdmin:
+def initialize_keycloak_admin() -> tuple[KeycloakAdmin, str]:
     """
     Initialize the Keycloak Admin client.
+
+    Tries KEYCLOAK_ADMIN first and falls back to KEYCLOAK_ADMIN_EMAIL: the
+    realm uses registrationEmailAsUsername, so once the admin account has an
+    email set, Keycloak may only resolve it by that email.
     """
-    try:
-        kc = KeycloakAdmin(
-            server_url=KEYCLOAK_URL,
-            username=KEYCLOAK_ADMIN,
-            password=KEYCLOAK_ADMIN_PASSWORD,
-            realm_name=KEYCLOAK_REALM,
-            verify=VERIFY_TLS,
-        )
-        # Verify connection by fetching the realm
-        kc.get_realm(KEYCLOAK_REALM)
-        return kc
-    except Exception as e:
-        raise RuntimeError(f"Failed to initialize Keycloak Admin: {e}")
+    candidates = [
+        u for u in dict.fromkeys([KEYCLOAK_ADMIN, KEYCLOAK_ADMIN_EMAIL]) if u
+    ]
+    last_error: Optional[Exception] = None
+    for username in candidates:
+        try:
+            kc = KeycloakAdmin(
+                server_url=KEYCLOAK_URL,
+                username=username,
+                password=KEYCLOAK_ADMIN_PASSWORD,
+                realm_name=KEYCLOAK_REALM,
+                verify=VERIFY_TLS,
+            )
+            # Verify connection by fetching the realm
+            kc.get_realm(KEYCLOAK_REALM)
+            print(f"Authenticated to Keycloak as '{username}'")
+            return kc, username
+        except Exception as e:
+            print(f"Keycloak admin login failed for '{username}': {e}")
+            last_error = e
+    raise RuntimeError(f"Failed to initialize Keycloak Admin: {last_error}")
 
 
 # Instantiate a single Keycloak Admin
-K_ADMIN = initialize_keycloak_admin()
+K_ADMIN, K_ADMIN_USERNAME = initialize_keycloak_admin()
 
 
 # ---- Keycloak Helpers ------------------------------------------------
@@ -474,7 +486,7 @@ def apply_secret_to_cluster(secret):
 
 
 def configure_realm_settings(keycloak_admin: KeycloakAdmin):
-    admin_id = keycloak_admin.get_user_id("admin")
+    admin_id = keycloak_admin.get_user_id(K_ADMIN_USERNAME)
     admin_rep = keycloak_admin.get_user(admin_id)
     admin_rep["firstName"] = "WiseFood"
     admin_rep["lastName"] = "Administrator"
@@ -774,7 +786,7 @@ def main():
                 kc, MINIO_CLIENT, roles=("readonly", "readwrite", "consoleAdmin")
             )
             kc.assign_client_role(
-                kc.get_user_id(KEYCLOAK_ADMIN),
+                kc.get_user_id(K_ADMIN_USERNAME),
                 minio_internal_id,
                 kc.get_client_role(minio_internal_id, "consoleAdmin"),
             )
