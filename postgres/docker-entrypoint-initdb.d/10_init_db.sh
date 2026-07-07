@@ -31,3 +31,14 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" "$KEYCLOAK_DB" <<-EOSQL
     GRANT SELECT ON ALL TABLES IN SCHEMA "$KEYCLOAK_SCHEMA" TO "$WISEFOOD_USER";
     ALTER DEFAULT PRIVILEGES IN SCHEMA "$KEYCLOAK_SCHEMA" GRANT SELECT ON TABLES TO "$WISEFOOD_USER";
 EOSQL
+
+# Create dedicated 'foodchat' database, owned by the wisefood user.
+# Consumer: the FoodChat service session store (generic table names such as
+# sessions/messages), which gets its own database instead of sharing 'wisefood'.
+# Idempotent: skipped if the database already exists, so re-runs don't fail.
+FOODCHAT_DB="${FOODCHAT_DB:-foodchat}"
+if [ "$(psql -X -A -t --username "$POSTGRES_USER" -c "SELECT 1 FROM pg_database WHERE datname='$FOODCHAT_DB'")" != "1" ]; then
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" <<-EOSQL
+        CREATE DATABASE "$FOODCHAT_DB" OWNER "$WISEFOOD_USER" ENCODING 'utf-8';
+EOSQL
+fi
