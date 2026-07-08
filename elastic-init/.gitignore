@@ -1,0 +1,9 @@
+elastic.tar.gz
+_state/
+indices/
+nodes
+node.lock
+snapshot_cache/
+logs/
+__pycache__/
+*_dump.json
