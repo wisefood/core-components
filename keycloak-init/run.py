@@ -544,6 +544,7 @@ def configure_realm_settings(keycloak_admin: KeycloakAdmin):
         "cs",
         "uk",
         "sk",
+        "sl",
         "pl",
         "da",
     ]
