@@ -524,6 +524,10 @@ def configure_realm_settings(keycloak_admin: KeycloakAdmin):
 
     realm_rep["loginTheme"] = "keycloakify-starter"
     realm_rep["accountTheme"] = "keycloakify-starter"
+    # Without this emails resolve from the built-in `base` theme, which carries
+    # no Slovene at all in Keycloak 25 — verification and reset mails would stay
+    # English even for users whose locale is sl.
+    realm_rep["emailTheme"] = "keycloakify-starter"
 
     # Set internationalization settings
     realm_rep["internationalizationEnabled"] = True
