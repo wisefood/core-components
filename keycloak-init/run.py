@@ -485,6 +485,15 @@ def apply_secret_to_cluster(secret):
             print(f"Failed to create secret: {e}")
 
 
+# How long Keycloak keeps login events, in seconds. 90 days by default: long
+# enough for a quarterly evaluation report, short enough that the events table
+# does not grow without bound on a 5Gi volume. Admin events have no expiry
+# setting in Keycloak and are pruned separately.
+KEYCLOAK_EVENTS_EXPIRATION = int(
+    os.getenv("KEYCLOAK_EVENTS_EXPIRATION", str(90 * 24 * 3600))
+)
+
+
 def configure_realm_settings(keycloak_admin: KeycloakAdmin):
     admin_id = keycloak_admin.get_user_id(K_ADMIN_USERNAME)
     admin_rep = keycloak_admin.get_user(admin_id)
@@ -521,6 +530,25 @@ def configure_realm_settings(keycloak_admin: KeycloakAdmin):
     realm_rep["rememberMe"] = True
     realm_rep["verifyEmail"] = True
     realm_rep["resetPasswordAllowed"] = True
+
+    # Authentication events. Off by default in Keycloak, which is why the
+    # platform has no record of logins, registrations or admin actions — the
+    # one part of "who used what, when" that no application code can
+    # reconstruct after the fact. `wisefood` already holds SELECT on the
+    # keycloak schema, so these become queryable the moment they are recorded.
+    #
+    # Login events expire; admin events are kept until the admin console or a
+    # cleanup job removes them. `enabledEventTypes: []` means "all types",
+    # which is what Keycloak's own default is when events are switched on.
+    realm_rep["eventsEnabled"] = True
+    realm_rep["eventsExpiration"] = KEYCLOAK_EVENTS_EXPIRATION
+    realm_rep["enabledEventTypes"] = []
+    realm_rep["adminEventsEnabled"] = True
+    realm_rep["adminEventsDetailsEnabled"] = True
+    if "jboss-logging" not in (realm_rep.get("eventsListeners") or []):
+        realm_rep["eventsListeners"] = list(
+            dict.fromkeys((realm_rep.get("eventsListeners") or []) + ["jboss-logging"])
+        )
 
     realm_rep["loginTheme"] = "keycloakify-starter"
     realm_rep["accountTheme"] = "keycloakify-starter"
