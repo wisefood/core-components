@@ -3,8 +3,10 @@
 
   Mirrors wisefood-api/src/email_layout.py so a verification mail, a password
   reset and a reminder from the platform read as the same sender: the logo on
-  the site's warm background, a white card, one button, the consortium footer
-  with the EU emblem. Table layout and inline styles because mail clients are
+  a white page, a white card, one button, the consortium footer with the EU
+  emblem. White and neutral greys only: Gmail's apps and Outlook darken light
+  colours in dark mode but keep their hue, and the old warm cream page
+  arrived brown. Table layout and inline styles because mail clients are
   not browsers; the <style> block only adds what inline styles cannot reach
   (the base message HTML of the emails this theme does not reword, and the
   phone breakpoint).
@@ -17,11 +19,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="x-apple-disable-message-reformatting">
-<meta name="color-scheme" content="light">
-<meta name="supported-color-schemes" content="light">
+<meta name="color-scheme" content="light only">
+<meta name="supported-color-schemes" content="light only">
 <title>${title}</title>
 <style>
-  body { margin:0; padding:0; background:#f6efe6; }
+  :root { color-scheme: light only; }
+  body { margin:0; padding:0; background:#ffffff; }
   a { color:#aa2944; }
   .wf-body p { margin:0 0 14px; font-size:15px; line-height:1.6; color:#3d4148; }
   @media (max-width:620px) {
@@ -30,13 +33,13 @@
   }
 </style>
 </head>
-<body style="margin:0;padding:0;background:#f6efe6;">
-<#if preheader?has_content><div style="display:none;max-height:0;max-width:0;overflow:hidden;opacity:0;mso-hide:all;color:#f6efe6;font-size:1px;line-height:1px;">${preheader}&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;</div></#if>
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f6efe6;">
+<body style="margin:0;padding:0;background:#ffffff;">
+<#if preheader?has_content><div style="display:none;max-height:0;max-width:0;overflow:hidden;opacity:0;mso-hide:all;color:#ffffff;font-size:1px;line-height:1px;">${preheader}&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;</div></#if>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#ffffff;">
 <tr><td class="wf-outer" align="center" style="padding:32px 12px;">
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;">
 <tr><td align="center" style="padding:0 0 24px;"><a href="${properties.wfAppUrl}" target="_blank" rel="noopener" style="text-decoration:none;"><img src="${properties.wfLogoUrl}" width="210" alt="WiseFood" style="display:block;border:0;outline:none;width:210px;max-width:210px;height:auto;"></a></td></tr>
-<tr><td style="background:#ffffff;border:1px solid #ebe3d7;border-radius:16px;">
+<tr><td style="background:#ffffff;border:1px solid #e4e4e7;border-radius:16px;">
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
 <tr><td class="wf-pad wf-body" style="padding:36px 40px 30px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#3d4148;">
 <#if title?has_content><h1 style="margin:0 0 18px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:22px;line-height:1.3;font-weight:600;color:#1d2125;">${title}</h1></#if>
