@@ -1,0 +1,46 @@
+{
+  "ingredient_vectors_v1": {
+    "mappings": {
+      "dynamic": "strict",
+      "properties": {
+        "collection": {
+          "type": "keyword"
+        },
+        "document": {
+          "fields": {
+            "raw": {
+              "type": "keyword"
+            }
+          },
+          "type": "text"
+        },
+        "embedding": {
+          "dims": 384,
+          "index": true,
+          "index_options": {
+            "ef_construction": 100,
+            "m": 16,
+            "type": "hnsw"
+          },
+          "similarity": "cosine",
+          "type": "dense_vector"
+        },
+        "embedding_model": {
+          "type": "keyword"
+        },
+        "embedding_revision": {
+          "type": "keyword"
+        },
+        "metadata": {
+          "type": "flattened"
+        },
+        "source_id": {
+          "type": "keyword"
+        },
+        "vector_space": {
+          "type": "keyword"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "export_date": "2026-08-25",
+  "created_at": "2026-08-25T13:44:07.918482+00:00",
+  "project": "RecipeWrangler-Backend",
+  "source_bundle": "dumps/20260825173000-full/2026-08-25",
+  "notes": "v4 regional API corpus. The recipe index carries its own physical name, so a restore creates a NEW index and only then moves the 'recipes' alias onto it -- the previously live recipes_v4 is left in place as the rollback. Drop recipes_v4 by hand after verifying, never via DROP_INDICES: 'recipes' there names the alias, not an index, and ES refuses a delete-by-alias, so it would only ever log a spurious failure.",
+  "components": {
+    "elasticsearch": {
+      "indices": {
+        "recipes_v4_no_heuristic_cost_20260825": {
+          "documents": 7628,
+          "alias": "recipes",
+          "archive": "elasticsearch/recipes_v4_no_heuristic_cost_20260825_documents.ndjson.gz",
+          "mapping": "elasticsearch/recipes_v4_no_heuristic_cost_20260825_mapping.json",
+          "settings": "elasticsearch/recipes_v4_no_heuristic_cost_20260825_settings.json"
+        },
+        "ingredient_vectors_v1": {
+          "documents": 138930,
+          "alias": "ingredient_vectors",
+          "archive": "elasticsearch/ingredient_vectors_v1_documents.ndjson.gz",
+          "mapping": "elasticsearch/ingredient_vectors_v1_mapping.json",
+          "settings": "elasticsearch/ingredient_vectors_v1_settings.json"
+        }
+      }
+    },
+    "postgres": {
+      "database": "nutrients",
+      "format": "pg_dump custom",
+      "archive": "not shipped in this image; see core-components/postgres-rw",
+      "tables": {
+        "nutrients-ingredients-eu": 8148,
+        "nutrients-ingredients-hungarian": 500,
+        "nutrients-ingredients-irish": 1307,
+        "nutrients-ingredients-slovenian": 320,
+        "nutrients-recipe-profiles": 32240,
+        "pipeline_static_data": 5
+      }
+    },
+    "neo4j": {
+      "database": "neo4j",
+      "format": "neo4j-admin native dump",
+      "archive": "not shipped in this image; see RecipeWrangler-Backend/neo4j-docker",
+      "nodes": 163375,
+      "relationships": 493806
+    }
+  }
+}

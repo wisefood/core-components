@@ -1,0 +1,15 @@
+# Keep the ~600MB bundle as the only large thing in the build context.
+*_dump.json
+_state/
+indices/
+snapshot_cache/
+logs/
+nodes
+node.lock
+elastic.tar.gz
+__pycache__/
+*.pyc
+Makefile
+README.md
+.gitignore
+.dockerignore

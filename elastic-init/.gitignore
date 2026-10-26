@@ -7,3 +7,10 @@ snapshot_cache/
 logs/
 __pycache__/
 *_dump.json
+
+# The handoff bundle's document archives are ~600MB; they are distributed via
+# the baked image, not git. Mappings/settings/manifest stay tracked so the
+# schema history is reviewable.
+bundle/**/*.ndjson.gz
+bundle/postgres/
+bundle/neo4j/

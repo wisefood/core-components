@@ -1,0 +1,580 @@
+{
+  "recipes_v4_no_heuristic_cost_20260825": {
+    "mappings": {
+      "dynamic": "strict",
+      "properties": {
+        "ai_allergens": {
+          "type": "keyword"
+        },
+        "ai_generated_fields": {
+          "type": "keyword"
+        },
+        "ai_tags": {
+          "type": "keyword"
+        },
+        "all_text": {
+          "analyzer": "default_text",
+          "type": "text"
+        },
+        "allergen_confidence": {
+          "type": "half_float"
+        },
+        "allergen_evidence": {
+          "properties": {
+            "allergen": {
+              "type": "keyword"
+            },
+            "classification_version": {
+              "type": "keyword"
+            },
+            "declaration_id": {
+              "type": "keyword"
+            },
+            "evidence_status": {
+              "type": "keyword"
+            },
+            "foodon_ids": {
+              "type": "keyword"
+            },
+            "ingredient": {
+              "type": "keyword"
+            },
+            "ingredient_id": {
+              "type": "keyword"
+            },
+            "keyword_matches": {
+              "type": "keyword"
+            },
+            "presence": {
+              "type": "keyword"
+            },
+            "sources": {
+              "type": "keyword"
+            }
+          },
+          "type": "nested"
+        },
+        "allergens": {
+          "type": "keyword"
+        },
+        "annotation_evidence": {
+          "properties": {
+            "classification_version": {
+              "type": "keyword"
+            },
+            "confidence": {
+              "type": "half_float"
+            },
+            "evidence_status": {
+              "type": "keyword"
+            },
+            "facet": {
+              "type": "keyword"
+            },
+            "foodon_ids": {
+              "type": "keyword"
+            },
+            "method": {
+              "type": "keyword"
+            },
+            "sources": {
+              "type": "keyword"
+            },
+            "status": {
+              "type": "keyword"
+            },
+            "supporting_ingredients": {
+              "type": "keyword"
+            },
+            "value": {
+              "type": "keyword"
+            }
+          },
+          "type": "nested"
+        },
+        "best_nutri_rank": {
+          "type": "byte"
+        },
+        "collection_urn": {
+          "type": "keyword"
+        },
+        "consumer_suitability": {
+          "properties": {
+            "blocking_ingredients": {
+              "type": "keyword"
+            },
+            "classification_version": {
+              "type": "keyword"
+            },
+            "group": {
+              "type": "keyword"
+            },
+            "reason_codes": {
+              "type": "keyword"
+            },
+            "sources": {
+              "type": "keyword"
+            },
+            "status": {
+              "type": "keyword"
+            }
+          },
+          "type": "nested"
+        },
+        "content_digest": {
+          "doc_values": false,
+          "type": "keyword"
+        },
+        "convenience": {
+          "type": "keyword"
+        },
+        "cost_category": {
+          "type": "keyword"
+        },
+        "course_types": {
+          "copy_to": [
+            "all_text"
+          ],
+          "type": "keyword"
+        },
+        "created_at": {
+          "type": "date"
+        },
+        "creator": {
+          "type": "keyword"
+        },
+        "cuisines": {
+          "copy_to": [
+            "all_text"
+          ],
+          "type": "keyword"
+        },
+        "default_nutri_rank": {
+          "type": "byte"
+        },
+        "default_nutri_score": {
+          "type": "keyword"
+        },
+        "description": {
+          "analyzer": "default_text",
+          "copy_to": [
+            "all_text"
+          ],
+          "type": "text"
+        },
+        "diet_tags": {
+          "type": "keyword"
+        },
+        "disabled_at": {
+          "type": "date"
+        },
+        "disabled_reason": {
+          "doc_values": false,
+          "index": false,
+          "type": "keyword"
+        },
+        "duration": {
+          "type": "float"
+        },
+        "embedded_at": {
+          "type": "date"
+        },
+        "embedding": {
+          "dims": 384,
+          "index": true,
+          "index_options": {
+            "ef_construction": 100,
+            "m": 16,
+            "type": "int8_hnsw"
+          },
+          "similarity": "cosine",
+          "type": "dense_vector"
+        },
+        "embedding_model": {
+          "type": "keyword"
+        },
+        "embedding_text": {
+          "index": false,
+          "type": "text"
+        },
+        "enhancements": {
+          "properties": {
+            "after": {
+              "enabled": false,
+              "type": "object"
+            },
+            "agent": {
+              "type": "keyword"
+            },
+            "before": {
+              "enabled": false,
+              "type": "object"
+            },
+            "enhanced_at": {
+              "type": "date"
+            },
+            "fields": {
+              "type": "keyword"
+            },
+            "run_id": {
+              "type": "keyword"
+            }
+          },
+          "type": "nested"
+        },
+        "expert_recipe": {
+          "type": "boolean"
+        },
+        "external_id": {
+          "ignore_above": 256,
+          "type": "keyword"
+        },
+        "extras": {
+          "enabled": false,
+          "type": "object"
+        },
+        "flavor_profiles": {
+          "type": "keyword"
+        },
+        "food_groups": {
+          "type": "keyword"
+        },
+        "ground_truth_nutrition_source": {
+          "type": "keyword"
+        },
+        "has_ground_truth_nutrition": {
+          "type": "boolean"
+        },
+        "has_image": {
+          "type": "boolean"
+        },
+        "has_planeat_nutrition": {
+          "type": "boolean"
+        },
+        "has_profile": {
+          "type": "boolean"
+        },
+        "has_rcsi_nutrition": {
+          "type": "boolean"
+        },
+        "has_slovenian_nutrition": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "keyword"
+        },
+        "image_url": {
+          "doc_values": false,
+          "index": false,
+          "type": "keyword"
+        },
+        "ingredient_class_ancestors": {
+          "type": "keyword"
+        },
+        "ingredient_count": {
+          "type": "short"
+        },
+        "ingredient_names": {
+          "type": "keyword"
+        },
+        "ingredients": {
+          "properties": {
+            "canonical_urn": {
+              "type": "keyword"
+            },
+            "measurement": {
+              "index": false,
+              "type": "text"
+            },
+            "name": {
+              "analyzer": "default_text",
+              "copy_to": [
+                "all_text"
+              ],
+              "fields": {
+                "kw": {
+                  "ignore_above": 256,
+                  "normalizer": "lowercase_keyword",
+                  "type": "keyword"
+                }
+              },
+              "type": "text"
+            },
+            "position": {
+              "type": "short"
+            },
+            "quantity": {
+              "type": "float"
+            },
+            "unit": {
+              "type": "keyword"
+            }
+          },
+          "type": "nested"
+        },
+        "instructions": {
+          "analyzer": "default_text",
+          "type": "text"
+        },
+        "language": {
+          "type": "keyword"
+        },
+        "moods": {
+          "type": "keyword"
+        },
+        "nutri_color_eu": {
+          "type": "keyword"
+        },
+        "nutri_color_hu": {
+          "type": "keyword"
+        },
+        "nutri_color_ie": {
+          "type": "keyword"
+        },
+        "nutri_color_planeat": {
+          "type": "keyword"
+        },
+        "nutri_color_slovenian": {
+          "type": "keyword"
+        },
+        "nutri_points_eu": {
+          "type": "float"
+        },
+        "nutri_points_hu": {
+          "type": "float"
+        },
+        "nutri_points_ie": {
+          "type": "float"
+        },
+        "nutri_points_slovenian": {
+          "type": "float"
+        },
+        "nutri_rank_eu": {
+          "type": "byte"
+        },
+        "nutri_rank_hu": {
+          "type": "byte"
+        },
+        "nutri_rank_ie": {
+          "type": "byte"
+        },
+        "nutri_rank_slovenian": {
+          "type": "byte"
+        },
+        "nutri_score_eu": {
+          "type": "keyword"
+        },
+        "nutri_score_hu": {
+          "type": "keyword"
+        },
+        "nutri_score_ie": {
+          "type": "keyword"
+        },
+        "nutri_score_planeat": {
+          "type": "keyword"
+        },
+        "nutri_score_slovenian": {
+          "type": "keyword"
+        },
+        "nutrition_claims": {
+          "type": "keyword"
+        },
+        "nutrition_sources": {
+          "type": "keyword"
+        },
+        "pipeline_version": {
+          "type": "keyword"
+        },
+        "planning_excluded_reason": {
+          "type": "keyword"
+        },
+        "planning_tier": {
+          "type": "keyword"
+        },
+        "profile_kinds": {
+          "type": "keyword"
+        },
+        "profiled_at": {
+          "type": "date"
+        },
+        "profiles": {
+          "properties": {
+            "carbs_g_per_serving": {
+              "type": "float"
+            },
+            "composition_table": {
+              "type": "keyword"
+            },
+            "computed_at": {
+              "type": "date"
+            },
+            "coverage": {
+              "type": "half_float"
+            },
+            "energy_kcal_per_serving": {
+              "type": "float"
+            },
+            "fat_g_per_serving": {
+              "type": "float"
+            },
+            "fibre_g_per_serving": {
+              "type": "float"
+            },
+            "is_ground_truth": {
+              "type": "boolean"
+            },
+            "kind": {
+              "type": "keyword"
+            },
+            "low_coverage": {
+              "type": "boolean"
+            },
+            "match_confidence": {
+              "type": "half_float"
+            },
+            "nutri_color": {
+              "type": "keyword"
+            },
+            "nutri_points": {
+              "type": "float"
+            },
+            "nutri_rank": {
+              "type": "byte"
+            },
+            "nutri_score": {
+              "type": "keyword"
+            },
+            "nutrition_source": {
+              "type": "keyword"
+            },
+            "pipeline_version": {
+              "type": "keyword"
+            },
+            "protein_g_per_serving": {
+              "type": "float"
+            },
+            "region": {
+              "type": "keyword"
+            },
+            "salt_g_per_serving": {
+              "type": "float"
+            },
+            "sat_fat_g_per_serving": {
+              "type": "float"
+            },
+            "serves": {
+              "type": "float"
+            },
+            "sodium_mg_per_serving": {
+              "type": "float"
+            },
+            "sugar_g_per_serving": {
+              "type": "float"
+            },
+            "sust_per_serving": {
+              "type": "float"
+            },
+            "sust_total": {
+              "type": "float"
+            }
+          },
+          "type": "nested"
+        },
+        "recipe_id": {
+          "type": "keyword"
+        },
+        "region": {
+          "type": "keyword"
+        },
+        "regions_available": {
+          "type": "keyword"
+        },
+        "review_status": {
+          "type": "keyword"
+        },
+        "schema_version": {
+          "type": "short"
+        },
+        "seasonality": {
+          "type": "keyword"
+        },
+        "serves": {
+          "type": "float"
+        },
+        "source": {
+          "type": "keyword"
+        },
+        "source_id": {
+          "ignore_above": 256,
+          "type": "keyword"
+        },
+        "source_name": {
+          "ignore_above": 128,
+          "type": "keyword"
+        },
+        "source_rank": {
+          "type": "short"
+        },
+        "status": {
+          "type": "keyword"
+        },
+        "suitable_for": {
+          "type": "keyword"
+        },
+        "sust_per_serving": {
+          "type": "float"
+        },
+        "sust_score": {
+          "type": "float"
+        },
+        "tags": {
+          "copy_to": [
+            "all_text"
+          ],
+          "type": "keyword"
+        },
+        "title": {
+          "analyzer": "default_text",
+          "copy_to": [
+            "all_text"
+          ],
+          "fields": {
+            "autocomplete": {
+              "analyzer": "autocomplete",
+              "search_analyzer": "default_text",
+              "type": "text"
+            },
+            "exact": {
+              "ignore_above": 512,
+              "type": "keyword"
+            },
+            "kw": {
+              "ignore_above": 512,
+              "normalizer": "lowercase_keyword",
+              "type": "keyword"
+            }
+          },
+          "type": "text"
+        },
+        "title_normalized": {
+          "ignore_above": 512,
+          "type": "keyword"
+        },
+        "updated_at": {
+          "type": "date"
+        },
+        "url": {
+          "doc_values": false,
+          "index": false,
+          "type": "keyword"
+        },
+        "urn": {
+          "type": "keyword"
+        },
+        "visibility": {
+          "type": "keyword"
+        }
+      }
+    }
+  }
+}

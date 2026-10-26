@@ -1,0 +1,10 @@
+[
+  {
+    "index": "recipes_v4_no_heuristic_cost_20260825",
+    "docs.count": "7628"
+  },
+  {
+    "index": "ingredient_vectors_v1",
+    "docs.count": "138930"
+  }
+]

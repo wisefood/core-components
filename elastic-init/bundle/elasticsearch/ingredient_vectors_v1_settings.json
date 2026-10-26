@@ -1,0 +1,23 @@
+{
+  "ingredient_vectors_v1": {
+    "settings": {
+      "index": {
+        "creation_date": "1785920205291",
+        "number_of_replicas": "0",
+        "number_of_shards": "1",
+        "provided_name": "ingredient_vectors_v1",
+        "routing": {
+          "allocation": {
+            "include": {
+              "_tier_preference": "data_content"
+            }
+          }
+        },
+        "uuid": "yK8NobPiTgqdZqTuXh7vMw",
+        "version": {
+          "created": "8512000"
+        }
+      }
+    }
+  }
+}

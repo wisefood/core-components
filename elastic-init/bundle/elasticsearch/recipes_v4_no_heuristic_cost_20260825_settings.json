@@ -1,0 +1,60 @@
+{
+  "recipes_v4_no_heuristic_cost_20260825": {
+    "settings": {
+      "index": {
+        "analysis": {
+          "analyzer": {
+            "autocomplete": {
+              "filter": [
+                "lowercase",
+                "asciifolding",
+                "edge_ngram_filter"
+              ],
+              "tokenizer": "standard"
+            },
+            "default_text": {
+              "filter": [
+                "lowercase",
+                "asciifolding"
+              ],
+              "tokenizer": "standard"
+            }
+          },
+          "filter": {
+            "edge_ngram_filter": {
+              "max_gram": "20",
+              "min_gram": "2",
+              "type": "edge_ngram"
+            }
+          },
+          "normalizer": {
+            "lowercase_keyword": {
+              "filter": [
+                "lowercase",
+                "asciifolding"
+              ],
+              "type": "custom"
+            }
+          }
+        },
+        "creation_date": "1787658609631",
+        "max_result_window": "100000",
+        "number_of_replicas": "1",
+        "number_of_shards": "1",
+        "provided_name": "recipes_v4_no_heuristic_cost_20260825",
+        "refresh_interval": "5s",
+        "routing": {
+          "allocation": {
+            "include": {
+              "_tier_preference": "data_content"
+            }
+          }
+        },
+        "uuid": "fa_0s-DdTJm6SLdf7sYy8A",
+        "version": {
+          "created": "8512000"
+        }
+      }
+    }
+  }
+}

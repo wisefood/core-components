@@ -78,17 +78,22 @@ def configure_logging(log_file: Path) -> None:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Reset the recipes index, apply the schema, and import the dump."
+        description="Reset one index, apply a schema, and import a JSON/NDJSON dump. "
+        "Ad-hoc tool -- the standard load is restore.py, which drives the "
+        "bundle in /app/bundle. --input, --schema and --index are required "
+        "because this script no longer ships a default dump or schema.",
     )
     parser.add_argument(
         "--input",
-        default=os.getenv("IMPORT_FILE", str(SCRIPT_DIR / "recipes_dump.json")),
-        help="Path to the JSON dump file.",
+        default=os.getenv("IMPORT_FILE"),
+        required=not os.getenv("IMPORT_FILE"),
+        help="Path to the JSON/NDJSON dump file.",
     )
     parser.add_argument(
         "--schema",
-        default=os.getenv("SCHEMA_FILE", str(SCRIPT_DIR / "recipes_schema.json")),
-        help="Path to the Elasticsearch schema JSON file.",
+        default=os.getenv("SCHEMA_FILE"),
+        required=not os.getenv("SCHEMA_FILE"),
+        help="Path to the Elasticsearch schema JSON file ({settings, mappings}).",
     )
     parser.add_argument(
         "--es-url",
@@ -97,7 +102,8 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--index",
-        default=os.getenv("INDEX_NAME", "recipes"),
+        default=os.getenv("INDEX_NAME"),
+        required=not os.getenv("INDEX_NAME"),
         help="Target index name.",
     )
     parser.add_argument(
