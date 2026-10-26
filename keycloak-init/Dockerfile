@@ -7,13 +7,16 @@ WORKDIR /app
 COPY ./requirements.txt /app
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install the MinIO client
-RUN wget https://dl.min.io/client/mc/release/linux-amd64/mc \
-    && chmod +x mc \
-    && mv mc /usr/local/bin/
+# The MinIO client, vendored: dl.min.io answers 410 Gone since MinIO withdrew
+# its community downloads. bin/mc is the open-source client (AGPLv3,
+# https://github.com/minio/mc) built by bin/build-mc.sh; its checksum is in
+# bin/mc.sha256.
+COPY ./bin/mc /usr/local/bin/mc
+RUN chmod +x /usr/local/bin/mc && mc --version
 
-# Copy the rest of the application files
-COPY . /app/
+# The application itself. Only run.py: `COPY .` would put a second copy of
+# bin/mc into the image.
+COPY ./run.py /app/
 
 # Set the PYTHONPATH (modify as needed)
 ENV PYTHONPATH=/app/src
