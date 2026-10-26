@@ -493,6 +493,20 @@ KEYCLOAK_EVENTS_EXPIRATION = int(
     os.getenv("KEYCLOAK_EVENTS_EXPIRATION", str(90 * 24 * 3600))
 )
 
+# How long "Remember me" keeps someone signed in, in seconds. Keycloak falls
+# back to the ordinary SSO idle/max (5 h / 10 h below) when these are unset,
+# which made the checkbox worth one working day: anyone returning the next
+# morning signed in again. Thirty days idle covers people who use the platform
+# weekly during an evaluation; ninety days total is one evaluation quarter.
+# The refresh token follows these for remembered sessions, so the app stays
+# signed in across browser restarts for as long as they allow.
+KEYCLOAK_REMEMBER_ME_IDLE = int(
+    os.getenv("KEYCLOAK_REMEMBER_ME_IDLE", str(30 * 24 * 3600))
+)
+KEYCLOAK_REMEMBER_ME_MAX = int(
+    os.getenv("KEYCLOAK_REMEMBER_ME_MAX", str(90 * 24 * 3600))
+)
+
 
 def configure_realm_settings(keycloak_admin: KeycloakAdmin):
     admin_id = keycloak_admin.get_user_id(K_ADMIN_USERNAME)
@@ -530,6 +544,8 @@ def configure_realm_settings(keycloak_admin: KeycloakAdmin):
     realm_rep["ssoSessionIdleTimeout"] = 18000
     realm_rep["ssoSessionMaxLifespan"] = 36000
     realm_rep["rememberMe"] = True
+    realm_rep["ssoSessionIdleTimeoutRememberMe"] = KEYCLOAK_REMEMBER_ME_IDLE
+    realm_rep["ssoSessionMaxLifespanRememberMe"] = KEYCLOAK_REMEMBER_ME_MAX
     realm_rep["verifyEmail"] = True
     realm_rep["resetPasswordAllowed"] = True
 
