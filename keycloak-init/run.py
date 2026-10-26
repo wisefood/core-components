@@ -516,7 +516,9 @@ def configure_realm_settings(keycloak_admin: KeycloakAdmin):
             "ssl": True if SMTP_PORT == 465 else False,
             "starttls": True if SMTP_PORT == 465 else False,
             "from": SMTP_USER,
-            "fromDisplayName": "WiseFood SSO",
+            # The same sender name as the platform's own mail, so an inbox
+            # shows one "WiseFood" rather than two senders for one service.
+            "fromDisplayName": "WiseFood",
         }
 
     # Set branding and token lifespan
@@ -552,10 +554,11 @@ def configure_realm_settings(keycloak_admin: KeycloakAdmin):
 
     realm_rep["loginTheme"] = "keycloakify-starter"
     realm_rep["accountTheme"] = "keycloakify-starter"
-    # Without this emails resolve from the built-in `base` theme, which carries
-    # no Slovene at all in Keycloak 25 — verification and reset mails would stay
-    # English even for users whose locale is sl.
-    realm_rep["emailTheme"] = "keycloakify-starter"
+    # `wisefood` (keycloak/themes/wisefood) is the branded email frame and
+    # wording; it inherits keycloakify-starter, which carries the Slovene
+    # bundle base lacks in Keycloak 25. Pointing at keycloakify-starter
+    # directly would send the unstyled base emails again.
+    realm_rep["emailTheme"] = os.getenv("KEYCLOAK_EMAIL_THEME", "wisefood")
 
     # Set internationalization settings
     realm_rep["internationalizationEnabled"] = True

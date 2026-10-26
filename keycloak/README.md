@@ -1,8 +1,60 @@
 # Keycloak IdP Image
 
-Keycloak 25.0 plus the WiseFood Keycloakify theme in `theme/wisefood-theme.jar`,
-baked in with `kc.sh build` (see `Dockerfile`). `make build push` publishes
-`wisefood/keycloak:latest`.
+Keycloak 25.0 plus the WiseFood Keycloakify theme in `theme/wisefood-theme.jar`
+and the WiseFood email theme in `themes/wisefood/`, baked in with `kc.sh build`
+(see `Dockerfile`). `make build push` publishes `wisefood/keycloak:latest`.
+
+## The WiseFood email theme (`themes/wisefood/email`)
+
+Every email Keycloak sends — verification, password reset, "update your
+account", the SMTP test, and its security alerts — goes out in the same frame
+as the platform's own mail: the WiseFood logo on the site's warm background, a
+white card, one button, and the consortium footer with the EU emblem.
+
+* **It is a plain folder theme, readable in review**, inheriting
+  `keycloakify-starter` (the jar), which in turn carries base plus the Slovene
+  bundle. Nothing in the jar is touched.
+* `html/template.ftl` is the frame. Base templates import `template.ftl`, which
+  resolves to this theme's, so even emails this theme does not reword get the
+  frame around Keycloak's own wording.
+* Five emails are reworded with a real button and plain language, in en, hu, sl
+  and el (`html/` and `text/` for each, `messages/messages_*.properties`):
+  `email-verification`, `password-reset`, `executeActions`,
+  `email-update-confirmation`, `email-test`. Subjects for those are overridden
+  too. Other locales fall back to English wording inside the same frame.
+* The frame mirrors `wisefood-api/src/email_layout.py`. **Change both
+  together** — colours, spacing, footer.
+* Images are absolute URLs (a mail cannot load Keycloak theme resources),
+  read from the container's environment through `theme.properties`:
+  `WISEFOOD_APP_URL`, `WISEFOOD_EMAIL_LOGO_URL`, `WISEFOOD_EMAIL_EU_URL`
+  (set in platform-deployment's `keycloak.libsonnet`). The files themselves are
+  the console's `public/email/`.
+* Message bundles follow the jar's convention: `\uXXXX`-escaped, and Java
+  MessageFormat rules apply — no bare single quotes.
+
+The realm selects it with `emailTheme = wisefood` (keycloak-init, overridable
+with `KEYCLOAK_EMAIL_THEME`), and sends as **"WiseFood"** rather than
+"WiseFood SSO", so an inbox shows one sender for the whole service.
+
+### Checking a change to the email theme
+
+Folder themes are refused when their real path lies outside Keycloak's themes
+directory, so **copy** the theme rather than symlinking it. With a Keycloak 25
+distribution and a mail catcher (Mailpit on `:1025`/`:8025`):
+
+```sh
+cp -r themes/wisefood "$KC_HOME/themes/"
+cp theme/wisefood-theme.jar "$KC_HOME/providers/"
+KEYCLOAK_ADMIN=admin KEYCLOAK_ADMIN_PASSWORD=admin "$KC_HOME/bin/kc.sh" start-dev \
+  --http-port=8099 --spi-theme-cache-themes=false --spi-theme-cache-templates=false
+```
+
+Set the realm's SMTP to the catcher and `emailTheme` to `wisefood`, give test
+users a `locale` attribute, then trigger mails through the admin API
+(`PUT /users/{id}/send-verify-email`, `PUT /users/{id}/execute-actions-email`,
+`POST /testSMTPConnection`) and the login page's "Forgot password". Check the
+subject and `<html lang>` follow the user's locale, that no `${env` survives in
+the HTML, and look at the result at desktop and phone widths.
 
 ## ⚠ The theme jar has local modifications — do not overwrite it blindly
 
@@ -56,8 +108,9 @@ that convention or diacritics break.
 Both live in `../keycloak-init/run.py` (`configure_realm_settings`):
 
 * `supportedLocales` must contain `sl`, or Keycloak ignores the locale entirely.
-* `emailTheme` must be set to `keycloakify-starter`, or emails resolve from
-  `base` — which has no Slovene — even though the login page is translated.
+* `emailTheme` must be `wisefood` (which inherits `keycloakify-starter`), or
+  emails lose the WiseFood frame; pointing it at `base` would also lose
+  Slovene, which base lacks in 25.0.
 
 The app also has to forward the user's language: `kc.login()`/`kc.register()`
 pass `locale` from the `wisefood_locale` cookie (see
